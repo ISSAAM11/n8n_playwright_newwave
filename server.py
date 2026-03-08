@@ -1,7 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_file
 from playwright.sync_api import sync_playwright
-import requests
-from flask import send_file
+import io
+import os  # ✅ Ajouté
 
 app = Flask(__name__)
 
@@ -28,15 +28,23 @@ def run_playwright():
                 page.click('button[title="Télécharger"]')
 
             download = download_info.value
-            file_path = f"/tmp/{download.suggested_filename}"
-            download.save_as(file_path)
+            filename = download.suggested_filename
 
+            # ✅ En mémoire, pas de sauvegarde disque
+            file_bytes = io.BytesIO(download.path().read_bytes())
             browser.close()
 
-            return send_file(file_path, mimetype="application/pdf", as_attachment=True, download_name=download.suggested_filename), 200
+            file_bytes.seek(0)
+            return send_file(
+                file_bytes,
+                mimetype="application/pdf",
+                as_attachment=True,
+                download_name=filename
+            ), 200
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(port=5000)
+    port = int(os.environ.get("PORT", 5000))   
+    app.run(host='0.0.0.0', port=port)

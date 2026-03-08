@@ -2,7 +2,7 @@ services:
   - type: web
     name: playwright-service
     runtime: python
-    buildCommand: "pip install -r requirements.txt && playwright install chromium && playwright install-deps chromium"
+    buildCommand: "pip install -r requirements.txt && playwright install --with-deps chromium"
     startCommand: "python server.py"
     envVars:
       - key: PYTHON_VERSION

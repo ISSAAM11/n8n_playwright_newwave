@@ -1,12 +1,11 @@
-FROM mcr.microsoft.com/playwright/python:v1.49.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.58.0-jammy
 
 WORKDIR /app
-
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+RUN playwright install chromium
 
 COPY . .
 
-EXPOSE 5000
-
+EXPOSE 10000
 CMD ["python", "server.py"]

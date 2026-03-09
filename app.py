@@ -1,15 +1,28 @@
-from flask import Flask, jsonify, send_file
-from playwright.sync_api import sync_playwright
 import io
-import os  # ✅ Ajouté
+from flask import Flask, send_file, jsonify
+from playwright.sync_api import sync_playwright
 
 app = Flask(__name__)
 
-@app.route('/run-playwright', methods=['POST'])
-def run_playwright():
+
+@app.route("/")
+def health():
+    return jsonify({"status": "ok", "message": "Flask Playwright server is running"}), 200
+
+
+@app.route("/download-quotation", methods=["GET"])
+def download_quotation():
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                ]
+            )
             page = browser.new_page()
 
             # Login
@@ -19,18 +32,18 @@ def run_playwright():
             page.click('button[type="submit"]')
             page.wait_for_load_state("networkidle")
 
-            # Naviguer
+            # Navigate
             page.goto("https://app.inter-fast.fr/dashboard/billing/quotations/1651d077-355c-4fca-b83d-e875a0127b30")
             page.wait_for_load_state("networkidle")
 
-            # Télécharger
+            # Download
             with page.expect_download() as download_info:
                 page.click('button[title="Télécharger"]')
 
             download = download_info.value
             filename = download.suggested_filename
 
-            # ✅ En mémoire, pas de sauvegarde disque
+            # In memory — no disk write
             file_bytes = io.BytesIO(download.path().read_bytes())
             browser.close()
 
@@ -43,8 +56,8 @@ def run_playwright():
             ), 200
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))   
-    app.run(host='0.0.0.0', port=port)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=False)
